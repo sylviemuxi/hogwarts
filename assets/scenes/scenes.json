@@ -1,0 +1,72 @@
+{
+  "暮海星圖檔案館": {
+    "sceneImage": "assets/scenes/twilight-archive.png",
+    "sceneGeneratedAt": "2026-05-31",
+    "scenePrompt": "A quiet magical archive at night, old stone school corridor opening into an astronomy archive, shelves of handwritten files, brass star charts, faint blue sea-glass light, candle glow, no characters, no readable text, wide 16:9 background."
+  },
+  "斜角巷": {
+    "sceneImage": "",
+    "sceneGeneratedAt": "",
+    "scenePrompt": "A bustling magical shopping street in late summer morning, crooked storefronts, cobblestone lane, school supply shops, warm window light, no close-up characters, no readable text, wide 16:9 background."
+  },
+  "麗痕書店": {
+    "sceneImage": "",
+    "sceneGeneratedAt": "",
+    "scenePrompt": "Interior of a magical bookstore, towering shelves, stacks of schoolbooks, warm brass lamps, afternoon crowd implied but no close-up characters, no readable text, wide 16:9 background."
+  },
+  "霍格華茲大廳": {
+    "sceneImage": "",
+    "sceneGeneratedAt": "",
+    "scenePrompt": "A vast magical school great hall, long tables, floating candlelight, enchanted ceiling impression without recognizable emblems, ceremonial atmosphere, no close-up characters, no readable text, wide 16:9 background."
+  },
+  "圖書館": {
+    "sceneImage": "",
+    "sceneGeneratedAt": "",
+    "scenePrompt": "A grand old magical library, high shelves, reading desks, restricted deep aisles fading into shadow, quiet academic mood, no close-up characters, no readable text, wide 16:9 background."
+  },
+  "天文塔": {
+    "sceneImage": "",
+    "sceneGeneratedAt": "",
+    "scenePrompt": "A high stone astronomy tower at night, open sky, brass telescope, star charts, cold moonlight, wind over ancient stone, no close-up characters, no readable text, wide 16:9 background."
+  },
+  "斯萊特林交誼廳": {
+    "sceneImage": "",
+    "sceneGeneratedAt": "",
+    "scenePrompt": "An underwater-adjacent green-lit common room in an old magical school dungeon, dark stone, elegant old furniture, lake-like light ripples, no close-up characters, no readable text, wide 16:9 background."
+  },
+  "葛來分多交誼廳": {
+    "sceneImage": "",
+    "sceneGeneratedAt": "",
+    "scenePrompt": "A warm tower common room in an old magical school, red and gold textiles, fireplace, round windows, cozy evening atmosphere, no close-up characters, no readable text, wide 16:9 background."
+  },
+  "雷文克勞交誼廳": {
+    "sceneImage": "",
+    "sceneGeneratedAt": "",
+    "scenePrompt": "An airy tower common room in an old magical school, blue and bronze details, arched windows, books, starry ceiling mood, quiet intellectual atmosphere, no close-up characters, no readable text, wide 16:9 background."
+  },
+  "赫夫帕夫交誼廳": {
+    "sceneImage": "",
+    "sceneGeneratedAt": "",
+    "scenePrompt": "A warm earth-toned common room in an old magical school, round doors, plants, low comfortable furniture, golden afternoon light, welcoming atmosphere, no close-up characters, no readable text, wide 16:9 background."
+  },
+  "黑湖邊": {
+    "sceneImage": "",
+    "sceneGeneratedAt": "",
+    "scenePrompt": "A quiet black lake shore near an old magical school, misty water, distant castle lights, reeds and stones, dusk or early night, no close-up characters, no readable text, wide 16:9 background."
+  },
+  "活米村": {
+    "sceneImage": "",
+    "sceneGeneratedAt": "",
+    "scenePrompt": "A snowy magical village street, crooked roofs, warm shop windows, winter atmosphere, no close-up characters, no readable text, wide 16:9 background."
+  },
+  "禁忌森林": {
+    "sceneImage": "",
+    "sceneGeneratedAt": "",
+    "scenePrompt": "A dark ancient forest at the edge of a magical school, moonlit roots, mist, hidden paths, quiet danger, no close-up characters, no readable text, wide 16:9 background."
+  },
+  "學生寢室": {
+    "sceneImage": "",
+    "sceneGeneratedAt": "",
+    "scenePrompt": "A quiet magical student dormitory, old wood beds, trunks, folded robes, rain at the window, intimate night mood, no close-up characters, no readable text, wide 16:9 background."
+  }
+}

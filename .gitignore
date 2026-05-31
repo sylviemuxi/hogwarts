@@ -1,0 +1,26 @@
+# Local logs
+*.log
+debug.log
+
+# Temporary files
+tmp/
+*.tmp
+*.bak
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Local environment / secrets
+.env
+.env.*
+
+# Local build output, if tooling is added later
+dist/
+build/
+node_modules/
+
+# Generated duplicate local asset
+assets/archive-bg.png

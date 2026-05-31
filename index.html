@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>霍格華茲</title>
+    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true">✦</span>
+          <div>
+            <h1>霍格華茲</h1>
+            <p id="brandLocation">暮海星圖檔案館</p>
+          </div>
+        </div>
+        <nav class="top-actions" aria-label="主要操作">
+          <button id="saveBtn" class="icon-btn" title="儲存進度" aria-label="儲存進度">💾</button>
+          <button id="backupBtn" class="icon-btn" title="備份所有世界線" aria-label="備份所有世界線">⤓</button>
+          <button id="restoreBtn" class="icon-btn" title="還原所有世界線" aria-label="還原所有世界線">⤒</button>
+          <button id="importBtn" class="icon-btn" title="匯入存檔或跑團全文" aria-label="匯入存檔或跑團全文">⇪</button>
+          <button id="exportJsonBtn" class="icon-btn" title="匯出 JSON" aria-label="匯出 JSON">{ }</button>
+          <button id="exportNovelBtn" class="icon-btn" title="匯出小說" aria-label="匯出小說">📖</button>
+          <button id="exportSummaryBtn" class="icon-btn" title="匯出世界摘要" aria-label="匯出世界摘要">☷</button>
+          <button id="authBtn" class="icon-btn" title="雲端登入" aria-label="雲端登入">◎</button>
+          <button id="settingsBtn" class="icon-btn" title="AI 設定" aria-label="AI 設定">⚙</button>
+        </nav>
+      </header>
+
+      <main id="homeView" class="home-view">
+        <section class="home-hero" aria-labelledby="homeTitle">
+          <p class="kicker">世界線／存檔管理頁</p>
+          <h2 id="homeTitle">選擇一份正在延續的魔法日記</h2>
+          <p>繼續舊存檔、匯入既有跑團紀錄，或新增角色重新開始。</p>
+          <div class="home-actions">
+            <button id="newSaveBtn" class="wide-btn">新增存檔</button>
+            <button id="homeImportBtn" class="wide-btn">匯入舊紀錄</button>
+            <button id="homeSettingsBtn" class="wide-btn">設定</button>
+          </div>
+        </section>
+
+        <section class="save-panel" aria-labelledby="saveListTitle">
+          <div class="section-head">
+            <h2 id="saveListTitle">繼續遊玩</h2>
+            <p id="saveCount"></p>
+          </div>
+          <div id="saveList" class="save-list"></div>
+          <details class="archive-section">
+            <summary>封存存檔</summary>
+            <div id="archivedSaveList" class="save-list"></div>
+          </details>
+        </section>
+      </main>
+
+      <main id="gameView" class="layout hidden">
+        <section class="story-panel" aria-labelledby="storyTitle">
+          <div class="story-head">
+            <div>
+              <h2 id="storyTitle">當前紀錄</h2>
+              <p id="sceneMeta"></p>
+            </div>
+            <div class="story-actions">
+              <button id="homeBtn" class="text-btn">存檔入口</button>
+              <button id="worldlineBtn" class="text-btn">查看世界線</button>
+            </div>
+          </div>
+          <article id="storyLog" class="story-log" aria-live="polite"></article>
+        </section>
+
+        <aside class="side-panel" aria-label="角色與世界資料">
+          <div class="tabs" role="tablist">
+            <button class="tab active" data-tab="profile" role="tab">角色</button>
+            <button class="tab" data-tab="world" role="tab">世界</button>
+            <button class="tab" data-tab="memory" role="tab">記憶</button>
+            <button class="tab" data-tab="explore" role="tab">探索</button>
+          </div>
+
+          <section id="profileTab" class="tab-panel active">
+            <div class="portrait layered-portrait">
+              <img id="sceneLayer" class="scene-layer" src="assets/scenes/twilight-archive.png" alt="目前場景">
+              <img id="characterLayer" class="character-layer hidden" alt="角色立繪">
+              <div id="portraitFallback" class="portrait-fallback">
+                <span aria-hidden="true">✦</span>
+                <strong>角色立繪尚未設定</strong>
+              </div>
+            </div>
+            <div class="portrait-mode" role="group" aria-label="立繪模式">
+              <button id="fullBodyModeBtn" class="mode-btn active" data-portrait-mode="fullBody">全身</button>
+              <button id="bustModeBtn" class="mode-btn" data-portrait-mode="bust">半身</button>
+            </div>
+            <div class="visual-actions">
+              <button id="scenePromptBtn" class="wide-btn">生成場景提示</button>
+              <button id="portraitPromptBtn" class="wide-btn">生成立繪提示</button>
+              <button id="lockVisualBtn" class="wide-btn">鎖定形象</button>
+              <label class="upload-btn"><span id="portraitUploadLabel">匯入全身</span><input id="portraitUpload" type="file" accept="image/*"></label>
+            </div>
+            <div class="field-grid" id="profileFields"></div>
+            <div class="stat-tools">
+              <button id="statHelpBtn" class="wide-btn">數值說明</button>
+              <button id="rollDiceBtn" class="wide-btn">擲骰檢定</button>
+            </div>
+            <div class="stat-list" id="statList"></div>
+            <button id="creatorBtn" class="wide-btn">捏人物</button>
+          </section>
+
+          <section id="worldTab" class="tab-panel">
+            <div id="timePanel" class="time-panel"></div>
+            <div class="field-grid" id="worldFields"></div>
+            <h3>物品</h3>
+            <ul id="inventoryList" class="compact-list"></ul>
+            <h3>事件旗標</h3>
+            <ul id="flagList" class="compact-list"></ul>
+          </section>
+
+          <section id="memoryTab" class="tab-panel">
+            <h3>NPC 記憶</h3>
+            <div id="npcList" class="npc-list"></div>
+            <h3>儲思盆</h3>
+            <div id="pensieveList" class="memory-list"></div>
+          </section>
+
+          <section id="exploreTab" class="tab-panel">
+            <h3>世界地圖</h3>
+            <div id="mapView" class="map-view" aria-label="世界地圖"></div>
+            <h3>目前可探索地點</h3>
+            <div id="locationList" class="location-list"></div>
+            <h3>可發起對話</h3>
+            <div id="talkList" class="talk-list"></div>
+          </section>
+        </aside>
+      </main>
+
+      <section id="choiceDock" class="choice-dock hidden" aria-label="行動選擇">
+        <div id="choiceList" class="choice-list"></div>
+        <form id="actionForm" class="action-form">
+          <input id="freeAction" type="text" autocomplete="off" placeholder="自由輸入角色的行動">
+          <button id="sendBtn" type="submit">送出</button>
+        </form>
+      </section>
+    </div>
+
+    <dialog id="importDialog" class="modal">
+      <form method="dialog">
+        <header>
+          <h2>匯入</h2>
+          <button class="icon-btn" value="cancel" aria-label="關閉">×</button>
+        </header>
+        <label>存檔名稱 <input id="importTitle" type="text" placeholder="未命名世界線"></label>
+        <textarea id="importText" placeholder="貼上 JSON 存檔、跑團全文或世界線摘要"></textarea>
+        <menu>
+          <button id="importRawBtn" value="default">匯入跑團全文</button>
+          <button id="importJsonConfirmBtn" value="default">匯入 JSON</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <dialog id="newSaveDialog" class="modal creator-modal">
+      <form method="dialog">
+        <header>
+          <h2>新增存檔</h2>
+          <button class="icon-btn" value="cancel" aria-label="關閉">×</button>
+        </header>
+        <div class="creator-grid">
+          <label>存檔名稱 <input id="newSaveTitle" type="text" value="新的世界線"></label>
+          <label>姓名 <input id="newCharName" type="text" value="未命名角色"></label>
+          <label>年齡 <input id="newCharAge" type="number" min="1" value="11"></label>
+          <label>血統 <input id="newCharBlood" type="text" value="未設定"></label>
+          <label>性別 <input id="newCharGender" type="text" value="未設定"></label>
+          <label>學院 <input id="newCharHouse" type="text" value="未分院"></label>
+          <label class="check-row"><input id="newDiceEnabled" type="checkbox"> 加入擲骰系統</label>
+          <label>家族背景 <textarea id="newCharFamily" placeholder="可以先留白，讓 AI DM 在後續慢慢補全"></textarea></label>
+          <label>外觀 <textarea id="newCharAppearance" placeholder="髮色、瞳色、氣質、衣著、特徵"></textarea></label>
+        </div>
+        <menu>
+          <button id="createSaveBtn" value="default">建立並開始</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <dialog id="settingsDialog" class="modal">
+      <form method="dialog">
+        <header>
+          <h2>AI 設定</h2>
+          <button class="icon-btn" value="cancel" aria-label="關閉">×</button>
+        </header>
+        <label>API Endpoint <input id="apiEndpoint" type="url"></label>
+        <label>Model <input id="apiModel" type="text"></label>
+        <label>API Key <input id="apiKey" type="password" autocomplete="off"></label>
+        <label class="check-row"><input id="desktopMode" type="checkbox"> 桌面模式：開啟時直接進入最近存檔</label>
+        <p class="fine-print">未設定金鑰時，系統會使用本地 DM 範例推進，不會離開瀏覽器。</p>
+        <menu>
+          <button id="saveSettingsBtn" value="default">儲存設定</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <dialog id="creatorDialog" class="modal creator-modal">
+      <form method="dialog">
+        <header>
+          <h2>Character Creator</h2>
+          <button class="icon-btn" value="cancel" aria-label="關閉">×</button>
+        </header>
+        <div class="creator-grid">
+          <label>姓名 <input id="charName" type="text"></label>
+          <label>年齡 <input id="charAge" type="number" min="1"></label>
+          <label>血統 <input id="charBlood" type="text"></label>
+          <label>性別 <input id="charGender" type="text"></label>
+          <label>學院 <input id="charHouse" type="text"></label>
+          <label>家族背景 <textarea id="charFamily"></textarea></label>
+          <label>外觀 <textarea id="charAppearance"></textarea></label>
+        </div>
+        <section class="appearance-preview" aria-label="角色外觀預覽">
+          <div class="preview-sigil" aria-hidden="true">✦</div>
+          <div>
+            <h3 id="previewName">未命名角色</h3>
+            <p id="previewMeta">未設定｜未分院</p>
+            <p id="previewAppearance">尚未建立外觀描述。</p>
+          </div>
+        </section>
+        <menu>
+          <button id="assistCharacterBtn" value="default">AI 協助完善角色</button>
+          <button id="saveCharacterBtn" value="default">套用角色</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <dialog id="worldlineDialog" class="modal wide-modal">
+      <form method="dialog">
+        <header>
+          <h2>世界線</h2>
+          <button class="icon-btn" value="cancel" aria-label="關閉">×</button>
+        </header>
+        <pre id="worldlineText"></pre>
+      </form>
+    </dialog>
+
+    <dialog id="memoryDialog" class="modal wide-modal">
+      <form method="dialog">
+        <header>
+          <h2 id="memoryTitle">回憶</h2>
+          <button class="icon-btn" value="cancel" aria-label="關閉">×</button>
+        </header>
+        <div id="memoryDetail" class="memory-detail"></div>
+      </form>
+    </dialog>
+
+    <dialog id="statHelpDialog" class="modal wide-modal">
+      <form method="dialog">
+        <header>
+          <h2>數值說明</h2>
+          <button class="icon-btn" value="cancel" aria-label="關閉">×</button>
+        </header>
+        <div id="statHelpContent" class="memory-detail"></div>
+      </form>
+    </dialog>
+
+    <dialog id="rollDialog" class="modal">
+      <form method="dialog">
+        <header>
+          <h2>擲骰檢定</h2>
+          <button class="icon-btn" value="cancel" aria-label="關閉">×</button>
+        </header>
+        <label>檢定數值 <select id="rollStat"></select></label>
+        <label>難度 DC <input id="rollDc" type="number" min="1" max="40" value="12"></label>
+        <div id="rollResult" class="roll-result">等待擲骰。</div>
+        <menu>
+          <button id="doRollBtn" value="default">擲 D20</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <dialog id="promptDialog" class="modal wide-modal">
+      <form method="dialog">
+        <header>
+          <h2 id="promptTitle">生成提示</h2>
+          <button class="icon-btn" value="cancel" aria-label="關閉">×</button>
+        </header>
+        <textarea id="promptText" readonly></textarea>
+        <menu>
+          <button id="copyPromptBtn" value="default">複製提示</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <dialog id="statConfirmDialog" class="modal wide-modal">
+      <form method="dialog">
+        <header>
+          <h2>匯入後數值確認</h2>
+          <button class="icon-btn" value="cancel" aria-label="關閉">×</button>
+        </header>
+        <p class="fine-print">系統會先保留舊紀錄明確寫出的數值；缺少的欄位才根據劇情推定。確認後才建立存檔。</p>
+        <div id="statConfirmList" class="stat-confirm-list"></div>
+        <menu>
+          <button id="confirmImportedStatsBtn" value="default">確認並建立存檔</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <dialog id="renameSaveDialog" class="modal">
+      <form method="dialog">
+        <header>
+          <h2>改名存檔</h2>
+          <button class="icon-btn" value="cancel" aria-label="關閉">×</button>
+        </header>
+        <label>新名稱 <input id="renameSaveInput" type="text"></label>
+        <menu>
+          <button id="confirmRenameSaveBtn" value="default">儲存名稱</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <dialog id="restoreDialog" class="modal">
+      <form method="dialog">
+        <header>
+          <h2>還原所有世界線</h2>
+          <button class="icon-btn" value="cancel" aria-label="關閉">×</button>
+        </header>
+        <p class="fine-print">貼上完整備份 JSON。還原會替換目前瀏覽器中的所有本機世界線。</p>
+        <textarea id="restoreText" placeholder="貼上完整備份 JSON"></textarea>
+        <menu>
+          <button id="confirmRestoreBtn" value="default">還原備份</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <dialog id="authDialog" class="modal auth-modal">
+      <form method="dialog">
+        <header>
+          <h2>雲端登入</h2>
+          <button class="icon-btn" value="cancel" aria-label="關閉">×</button>
+        </header>
+        <section class="auth-panel">
+          <p class="fine-print">目前為本機模式。設定 Supabase 後，可用 Email 登入連結或 Google 登入同步世界線。</p>
+          <label>Email <input id="authEmail" type="email" placeholder="you@example.com"></label>
+          <div class="auth-actions">
+            <button id="magicLinkBtn" type="button">寄送登入連結</button>
+            <button id="googleLoginBtn" type="button">使用 Google 登入</button>
+          </div>
+          <div id="authStatus" class="auth-status">雲端尚未設定，不會傳送任何登入資料。</div>
+        </section>
+      </form>
+    </dialog>
+
+    <script src="app.js"></script>
+  </body>
+</html>
