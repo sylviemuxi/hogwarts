@@ -468,6 +468,7 @@ document.querySelector("#importRawBtn").addEventListener("click", (event) => {
 document.querySelector("#saveSettingsBtn").addEventListener("click", (event) => {
   event.preventDefault();
   settings = {
+    provider: document.querySelector("#aiProvider").value,
     endpoint: document.querySelector("#apiEndpoint").value.trim(),
     model: document.querySelector("#apiModel").value.trim(),
     apiKey: document.querySelector("#apiKey").value.trim(),
@@ -476,6 +477,8 @@ document.querySelector("#saveSettingsBtn").addEventListener("click", (event) => 
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
   els.settingsDialog.close();
 });
+
+document.querySelector("#aiProvider").addEventListener("change", applyProviderDefaultsToForm);
 
 document.querySelector("#saveCharacterBtn").addEventListener("click", (event) => {
   event.preventDefault();
@@ -551,12 +554,32 @@ function loadSettings() {
 
 function defaultSettings() {
   return {
+    provider: "openai-compatible",
     endpoint: "https://api.openai.com/v1/responses",
     model: "gpt-4.1-mini",
     apiKey: "",
     desktopMode: false
   };
 }
+
+const providerDefaults = {
+  "openai-compatible": {
+    endpoint: "https://api.openai.com/v1/responses",
+    model: "gpt-4.1-mini"
+  },
+  "lm-studio": {
+    endpoint: "http://localhost:1234/v1/chat/completions",
+    model: "local-model"
+  },
+  "ollama": {
+    endpoint: "http://localhost:11434/api/generate",
+    model: "llama3.1"
+  },
+  "custom-local": {
+    endpoint: "http://localhost:8080/generate",
+    model: "local-model"
+  }
+};
 
 function bootApp() {
   const activeSaves = db.saves.filter((save) => !save.archived);
@@ -1167,7 +1190,7 @@ async function submitAction(action) {
   renderStory();
 
   try {
-    const response = settings.apiKey ? await callAiDm(action) : localDm(action);
+    const response = isAiConfigured() ? await callAiDm(action) : localDm(action);
     applyDmResponse(response);
   } catch (error) {
     applyDmResponse(localDm(action, `AI 連線未完成：${error.message}`));
@@ -1212,22 +1235,91 @@ function snapshotState() {
 
 async function callAiDm(action) {
   const prompt = buildDmPrompt(action);
-  const res = await fetch(settings.endpoint, {
+  const provider = settings.provider || "openai-compatible";
+  const request = buildAiRequest(provider, prompt);
+  const res = await fetch(settings.endpoint || getProviderDefaults(provider).endpoint, request);
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+  const raw = await res.text();
+  let data = raw;
+  try {
+    data = JSON.parse(raw);
+  } catch {
+    // Some local servers return plain text directly.
+  }
+  return parseDmJson(extractAiText(provider, data));
+}
+
+function isAiConfigured() {
+  const provider = settings.provider || "openai-compatible";
+  if (!settings.endpoint && !getProviderDefaults(provider).endpoint) return false;
+  if (provider === "openai-compatible") return Boolean(settings.apiKey && settings.endpoint && settings.model);
+  return Boolean((settings.endpoint || getProviderDefaults(provider).endpoint) && (settings.model || getProviderDefaults(provider).model));
+}
+
+function buildAiRequest(provider, prompt) {
+  if (provider === "ollama") {
+    return {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: settings.model || getProviderDefaults(provider).model,
+        prompt,
+        stream: false,
+        options: { temperature: 0.85 }
+      })
+    };
+  }
+
+  if (provider === "lm-studio") {
+    return {
+      method: "POST",
+      headers: buildAiHeaders(false),
+      body: JSON.stringify({
+        model: settings.model || getProviderDefaults(provider).model,
+        messages: [
+          { role: "system", content: "你是沉浸式長期跑團的 AI DM。只回傳有效 JSON。" },
+          { role: "user", content: prompt }
+        ],
+        temperature: 0.85
+      })
+    };
+  }
+
+  if (provider === "custom-local") {
+    return {
+      method: "POST",
+      headers: buildAiHeaders(Boolean(settings.apiKey)),
+      body: JSON.stringify({
+        model: settings.model || getProviderDefaults(provider).model,
+        prompt,
+        temperature: 0.85
+      })
+    };
+  }
+
+  return {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${settings.apiKey}`
-    },
+    headers: buildAiHeaders(true),
     body: JSON.stringify({
-      model: settings.model,
+      model: settings.model || getProviderDefaults(provider).model,
       input: prompt,
       temperature: 0.85
     })
-  });
-  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-  const data = await res.json();
-  const text = data.output_text || data.output?.flatMap((x) => x.content || []).map((x) => x.text || "").join("\n") || "";
-  return parseDmJson(text);
+  };
+}
+
+function buildAiHeaders(requireKey) {
+  const headers = { "Content-Type": "application/json" };
+  if (settings.apiKey || requireKey) headers.Authorization = `Bearer ${settings.apiKey || ""}`;
+  return headers;
+}
+
+function extractAiText(provider, data) {
+  if (typeof data === "string") return data;
+  if (provider === "ollama") return data.response || data.message?.content || "";
+  if (provider === "lm-studio") return data.choices?.[0]?.message?.content || data.choices?.[0]?.text || "";
+  if (provider === "custom-local") return data.text || data.response || data.output_text || data.content || "";
+  return data.output_text || data.output?.flatMap((x) => x.content || []).map((x) => x.text || "").join("\n") || "";
 }
 
 function buildDmPrompt(action) {
@@ -1791,11 +1883,31 @@ ${campaign.storySummary}
 }
 
 function openSettings() {
-  document.querySelector("#apiEndpoint").value = settings.endpoint || defaultSettings().endpoint;
-  document.querySelector("#apiModel").value = settings.model || defaultSettings().model;
+  document.querySelector("#aiProvider").value = settings.provider || defaultSettings().provider;
+  document.querySelector("#apiEndpoint").value = settings.endpoint || getProviderDefaults(settings.provider).endpoint;
+  document.querySelector("#apiModel").value = settings.model || getProviderDefaults(settings.provider).model;
   document.querySelector("#apiKey").value = settings.apiKey || "";
   document.querySelector("#desktopMode").checked = Boolean(settings.desktopMode);
   els.settingsDialog.showModal();
+}
+
+function getProviderDefaults(provider) {
+  return providerDefaults[provider] || providerDefaults["openai-compatible"];
+}
+
+function applyProviderDefaultsToForm() {
+  const provider = document.querySelector("#aiProvider").value;
+  const defaults = getProviderDefaults(provider);
+  const endpoint = document.querySelector("#apiEndpoint");
+  const model = document.querySelector("#apiModel");
+  const knownEndpoints = Object.values(providerDefaults).map((item) => item.endpoint);
+  const knownModels = Object.values(providerDefaults).map((item) => item.model);
+  if (!endpoint.value.trim() || knownEndpoints.includes(endpoint.value.trim())) {
+    endpoint.value = defaults.endpoint;
+  }
+  if (!model.value.trim() || knownModels.includes(model.value.trim())) {
+    model.value = defaults.model;
+  }
 }
 
 function openCreator() {

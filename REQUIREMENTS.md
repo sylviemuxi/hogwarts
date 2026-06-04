@@ -258,6 +258,29 @@ turn_snapshot
 
 AI DM 每回合需讀取結構化記憶，而不是只依賴最近對話。這是避免長期跑團失憶的核心。
 
+### 4.1 AI 提供者與本地模型
+
+系統需允許玩家使用自己的 AI 作為 DM，不限定單一供應商。
+
+第一版需支援：
+
+- OpenAI-compatible Responses API
+- LM Studio `/v1/chat/completions`
+- Ollama `/api/generate`
+- 本地自訂 endpoint
+
+規則：
+
+- 本地 AI 可不需要 API Key
+- 不同 provider 需使用各自 request / response 格式
+- AI 回覆最終仍需被解析成統一 DM JSON
+- 若 AI 未設定或連線失敗，系統可退回本地範例 DM
+- 不論 provider 為何，AI prompt 只能包含目前 active campaign 的 `memoryLayer`、狀態快照與最近紀錄，不得讀取其他世界線或封存存檔
+
+用途：
+
+> 玩家可以沿用自己調教過的本地模型或私有 API，讓同一個網站成為可替換 AI DM 的長期魔法檔案館。
+
 ### 5. 回憶相簿／Pensieve 入口
 
 儲思盆不應只是欄位列表，需可點開查看單一回憶。
