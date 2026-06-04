@@ -768,6 +768,43 @@ select {
   line-height: 1.55;
 }
 
+.dossier-panel {
+  padding: 14px 16px 0;
+  display: grid;
+  gap: 14px;
+}
+
+.dossier-panel .fine-print {
+  margin: 0;
+}
+
+.dossier-file-list {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  display: grid;
+  gap: 8px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.dossier-file {
+  display: grid;
+  gap: 3px;
+  border-left: 2px solid var(--brass);
+  padding: 8px 10px;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.dossier-file strong {
+  color: var(--text);
+}
+
+.dossier-file span {
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
 .stat-confirm-list {
   margin: 14px 16px;
   display: grid;

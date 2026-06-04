@@ -22,6 +22,7 @@
           <button id="backupBtn" class="icon-btn" title="備份所有世界線" aria-label="備份所有世界線">⤓</button>
           <button id="restoreBtn" class="icon-btn" title="還原所有世界線" aria-label="還原所有世界線">⤒</button>
           <button id="importBtn" class="icon-btn" title="匯入存檔或跑團全文" aria-label="匯入存檔或跑團全文">⇪</button>
+          <button id="dossierBtn" class="icon-btn" title="追加卷宗到目前世界線" aria-label="追加卷宗到目前世界線">＋</button>
           <button id="exportJsonBtn" class="icon-btn" title="匯出 JSON" aria-label="匯出 JSON">{ }</button>
           <button id="exportNovelBtn" class="icon-btn" title="匯出小說" aria-label="匯出小說">📖</button>
           <button id="exportSummaryBtn" class="icon-btn" title="匯出世界摘要" aria-label="匯出世界摘要">☷</button>
@@ -153,6 +154,28 @@
         <menu>
           <button id="importRawBtn" value="default">匯入跑團全文</button>
           <button id="importJsonConfirmBtn" value="default">匯入 JSON</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <dialog id="dossierDialog" class="modal wide-modal">
+      <form method="dialog">
+        <header>
+          <h2>追加卷宗</h2>
+          <button class="icon-btn" value="cancel" aria-label="關閉">×</button>
+        </header>
+        <section class="dossier-panel">
+          <p class="fine-print">把補充紀錄加入目前世界線。可一次上傳多份 TXT、Markdown 或 JSON；內容會寫入當前 active campaign 的記憶層，不會讀取或污染其他存檔。</p>
+          <label>卷宗檔案
+            <input id="dossierFiles" type="file" multiple accept=".txt,.md,.markdown,.json,application/json,text/plain,text/markdown">
+          </label>
+          <div id="dossierFileList" class="dossier-file-list">尚未選擇檔案</div>
+          <label>補充說明
+            <textarea id="dossierNote" placeholder="例如：這些是 A 結束後接續的 B/C/D/E 紀錄，請 AI DM 視為同一世界線的後續資料。"></textarea>
+          </label>
+        </section>
+        <menu>
+          <button id="appendDossierBtn" value="default">加入目前世界線</button>
         </menu>
       </form>
     </dialog>

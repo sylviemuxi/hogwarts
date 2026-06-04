@@ -1,6 +1,7 @@
 const LEGACY_STORAGE_KEY = "sirius-archive-campaign-v1";
 const DB_KEY = "hogwarts-archive-db-v2";
 const SETTINGS_KEY = "sirius-archive-ai-settings-v1";
+const MAX_DOSSIER_CHARS = 30000;
 
 const timeCycle = ["清晨", "上午", "下午", "夜晚", "深夜"];
 
@@ -337,6 +338,10 @@ const els = {
   characterLayer: document.querySelector("#characterLayer"),
   portraitFallback: document.querySelector("#portraitFallback"),
   importDialog: document.querySelector("#importDialog"),
+  dossierDialog: document.querySelector("#dossierDialog"),
+  dossierFiles: document.querySelector("#dossierFiles"),
+  dossierFileList: document.querySelector("#dossierFileList"),
+  dossierNote: document.querySelector("#dossierNote"),
   settingsDialog: document.querySelector("#settingsDialog"),
   creatorDialog: document.querySelector("#creatorDialog"),
   worldlineDialog: document.querySelector("#worldlineDialog"),
@@ -391,6 +396,12 @@ document.querySelector("#backupBtn").addEventListener("click", backupAllWorldlin
 document.querySelector("#restoreBtn").addEventListener("click", openRestoreDialog);
 document.querySelector("#authBtn").addEventListener("click", openAuthDialog);
 document.querySelector("#importBtn").addEventListener("click", openImport);
+document.querySelector("#dossierBtn").addEventListener("click", openDossierDialog);
+document.querySelector("#dossierFiles").addEventListener("change", renderDossierFileList);
+document.querySelector("#appendDossierBtn").addEventListener("click", (event) => {
+  event.preventDefault();
+  appendDossiersToCampaign();
+});
 document.querySelector("#settingsBtn").addEventListener("click", openSettings);
 document.querySelector("#creatorBtn").addEventListener("click", openCreator);
 document.querySelector("#scenePromptBtn").addEventListener("click", () => openVisualPrompt("scene"));
@@ -695,6 +706,7 @@ function normalizeMemoryLayer(memoryLayer = {}, fallbackSummary = "") {
     ...(memoryLayer || {})
   };
   layer.worldMemory = Array.isArray(layer.worldMemory) ? layer.worldMemory : [];
+  layer.importedDossiers = Array.isArray(layer.importedDossiers) ? layer.importedDossiers : [];
   layer.loreDatabase = {
     ...structuredClone(defaultMemoryLayer.loreDatabase),
     ...(layer.loreDatabase || {})
@@ -1465,6 +1477,128 @@ function importRawText() {
   openStatConfirm(statDraft);
 }
 
+function openDossierDialog() {
+  els.dossierFiles.value = "";
+  els.dossierNote.value = "";
+  renderDossierFileList();
+  els.dossierDialog.showModal();
+}
+
+function renderDossierFileList() {
+  const files = Array.from(els.dossierFiles.files || []);
+  if (!files.length) {
+    els.dossierFileList.textContent = "尚未選擇檔案";
+    return;
+  }
+  els.dossierFileList.innerHTML = files.map((file) => `
+    <div class="dossier-file">
+      <strong>${escapeHtml(file.name)}</strong>
+      <span>${formatBytes(file.size)} · ${escapeHtml(file.type || "text")}</span>
+    </div>
+  `).join("");
+}
+
+async function appendDossiersToCampaign() {
+  const files = Array.from(els.dossierFiles.files || []);
+  if (!files.length || !campaign) return;
+
+  const note = els.dossierNote.value.trim();
+  const dossiers = [];
+
+  for (const file of files) {
+    const text = await readFileAsText(file);
+    const parsed = parseDossierText(text, file.name);
+    dossiers.push({
+      id: crypto.randomUUID(),
+      filename: file.name,
+      type: file.type || inferFileType(file.name),
+      size: file.size,
+      importedAt: new Date().toISOString(),
+      note,
+      title: parsed.title,
+      summary: parsed.summary,
+      content: parsed.content,
+      truncated: parsed.truncated,
+      sourceKind: parsed.sourceKind
+    });
+  }
+
+  campaign.memoryLayer = normalizeMemoryLayer(campaign.memoryLayer, campaign.storySummary);
+  campaign.memoryLayer.importedDossiers.push(...dossiers);
+  campaign.memoryLayer.worldMemory = mergeList(campaign.memoryLayer.worldMemory, [
+    `玩家於遊玩中追加 ${dossiers.length} 份卷宗到目前世界線。這些資料只屬於 active campaign「${campaign.title}」，AI DM 不得讀取其他世界線或封存存檔。`,
+    ...dossiers.map((item) => `追加卷宗「${item.filename}」：${item.summary}`)
+  ]);
+  if (note) {
+    campaign.memoryLayer.worldMemory = mergeList(campaign.memoryLayer.worldMemory, [`卷宗補充說明：${note}`]);
+  }
+  campaign.memoryLayer.campaignSummary = summarizeRawText(`${campaign.memoryLayer.campaignSummary || campaign.storySummary} ${dossiers.map((item) => item.summary).join(" ")}`);
+  campaign.flags.dossiers_appended = { label: "已於遊玩中追加卷宗", value: true, permanent: true };
+  addTurn("dm", buildDossierTurnText(dossiers, note), campaign.options);
+  saveActiveCampaign();
+  els.dossierDialog.close();
+  render();
+}
+
+function parseDossierText(text, filename) {
+  const trimmed = text.trim();
+  let title = filename;
+  let sourceKind = "text";
+  let summarySource = trimmed;
+
+  if (filename.toLowerCase().endsWith(".json")) {
+    try {
+      const json = JSON.parse(trimmed);
+      sourceKind = json.campaignId || json.memoryLayer || json.worldState ? "campaign-json-reference" : "json";
+      title = json.title || json.player?.name || filename;
+      summarySource = [
+        json.storySummary,
+        json.memoryLayer?.campaignSummary,
+        Array.isArray(json.memoryLayer?.worldMemory) ? json.memoryLayer.worldMemory.join(" ") : "",
+        Array.isArray(json.turns) ? json.turns.slice(-5).map((turn) => turn.text).join(" ") : ""
+      ].filter(Boolean).join(" ");
+    } catch {
+      sourceKind = "json-text";
+    }
+  }
+
+  const content = trimmed.length > MAX_DOSSIER_CHARS ? trimmed.slice(0, MAX_DOSSIER_CHARS) : trimmed;
+  return {
+    title,
+    sourceKind,
+    summary: summarizeRawText(summarySource || trimmed || filename),
+    content,
+    truncated: trimmed.length > MAX_DOSSIER_CHARS
+  };
+}
+
+function buildDossierTurnText(dossiers, note) {
+  const list = dossiers.map((item) => `- ${item.filename}：${item.summary}${item.truncated ? "（原文過長，已保留前段於本地記憶層）" : ""}`).join("\n");
+  return `新的卷宗已收入目前世界線。\n\n${list}${note ? `\n\n補充說明：${note}` : ""}\n\nAI DM 之後接續主持時，應把這些卷宗視為目前存檔的補充記憶；它們不會套用到其他世界線。`;
+}
+
+function readFileAsText(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(reader.error || new Error("檔案讀取失敗"));
+    reader.readAsText(file);
+  });
+}
+
+function inferFileType(filename) {
+  const lower = filename.toLowerCase();
+  if (lower.endsWith(".json")) return "application/json";
+  if (lower.endsWith(".md") || lower.endsWith(".markdown")) return "text/markdown";
+  return "text/plain";
+}
+
+function formatBytes(bytes) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
 function inferStatsFromLegacyText(text) {
   const stats = {};
   Object.keys(statDescriptions).forEach((name) => {
@@ -1591,6 +1725,9 @@ ${Object.entries(campaign.locations).map(([name, loc]) => `- ${name}: ${loc.unlo
 - campaign_summary: ${campaign.memoryLayer?.campaignSummary || campaign.storySummary}
 - world_memory:
 ${(campaign.memoryLayer?.worldMemory || []).map((item) => `  - ${item}`).join("\n")}
+
+## 追加卷宗
+${(campaign.memoryLayer?.importedDossiers || []).map((item) => `- ${item.filename}: ${item.summary}${item.truncated ? "（原文過長，已截取保存）" : ""}`).join("\n") || "- 無"}
 
 ## 物品
 ${campaign.inventory.map((item) => `- ${item.name}: ${item.note || ""}`).join("\n")}
