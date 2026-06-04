@@ -316,10 +316,12 @@ AI DM 每回合需讀取結構化記憶，而不是只依賴最近對話。這�
 - TXT／Markdown 小說體紀錄
 - JSON 存檔或角色資料包
 - 多份檔案一次上傳，例如 A 已遊玩完畢後，追加 B、C、D、E 作為後續卷宗
+- 新建世界線時可先上傳多份開局卷宗，作為該存檔的初始記憶
 
 規則：
 
 - 追加卷宗只能寫入目前 active campaign
+- 開局卷宗只能寫入新建立的 campaign
 - AI DM 只能讀取目前 active campaign 的 `memoryLayer.importedDossiers`
 - 不得讀取其他世界線、封存存檔或其他角色資料，避免記憶污染
 - JSON 檔若是其他存檔，預設作為「參考卷宗」加入，不直接覆蓋目前世界線

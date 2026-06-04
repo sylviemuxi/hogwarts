@@ -197,6 +197,17 @@
           <label>家族背景 <textarea id="newCharFamily" placeholder="可以先留白，讓 AI DM 在後續慢慢補全"></textarea></label>
           <label>外觀 <textarea id="newCharAppearance" placeholder="髮色、瞳色、氣質、衣著、特徵"></textarea></label>
         </div>
+        <section class="dossier-panel new-dossier-panel">
+          <h3>開局卷宗</h3>
+          <p class="fine-print">可在建立世界線時先加入多份舊紀錄或角色資料。這些檔案會成為新存檔自己的初始記憶，不會套用到其他世界線。</p>
+          <label>卷宗檔案
+            <input id="newDossierFiles" type="file" multiple accept=".txt,.md,.markdown,.json,application/json,text/plain,text/markdown">
+          </label>
+          <div id="newDossierFileList" class="dossier-file-list">尚未選擇檔案</div>
+          <label>開局卷宗說明
+            <textarea id="newDossierNote" placeholder="例如：這些檔案是此角色過去的跑團紀錄，請 AI DM 作為新世界線開局記憶。"></textarea>
+          </label>
+        </section>
         <menu>
           <button id="createSaveBtn" value="default">建立並開始</button>
         </menu>

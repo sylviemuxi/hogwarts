@@ -349,6 +349,9 @@ const els = {
   memoryTitle: document.querySelector("#memoryTitle"),
   memoryDetail: document.querySelector("#memoryDetail"),
   newSaveDialog: document.querySelector("#newSaveDialog"),
+  newDossierFiles: document.querySelector("#newDossierFiles"),
+  newDossierFileList: document.querySelector("#newDossierFileList"),
+  newDossierNote: document.querySelector("#newDossierNote"),
   statHelpDialog: document.querySelector("#statHelpDialog"),
   statHelpContent: document.querySelector("#statHelpContent"),
   rollDialog: document.querySelector("#rollDialog"),
@@ -402,6 +405,7 @@ document.querySelector("#appendDossierBtn").addEventListener("click", (event) =>
   event.preventDefault();
   appendDossiersToCampaign();
 });
+document.querySelector("#newDossierFiles").addEventListener("change", () => renderFileList(els.newDossierFiles, els.newDossierFileList));
 document.querySelector("#settingsBtn").addEventListener("click", openSettings);
 document.querySelector("#creatorBtn").addEventListener("click", openCreator);
 document.querySelector("#scenePromptBtn").addEventListener("click", () => openVisualPrompt("scene"));
@@ -446,9 +450,9 @@ document.querySelector("#exportJsonBtn").addEventListener("click", exportJson);
 document.querySelector("#exportNovelBtn").addEventListener("click", exportNovel);
 document.querySelector("#exportSummaryBtn").addEventListener("click", exportSummary);
 
-document.querySelector("#createSaveBtn").addEventListener("click", (event) => {
+document.querySelector("#createSaveBtn").addEventListener("click", async (event) => {
   event.preventDefault();
-  createSaveFromForm();
+  await createSaveFromForm();
 });
 
 document.querySelector("#importJsonConfirmBtn").addEventListener("click", (event) => {
@@ -1407,10 +1411,13 @@ function openNewSave() {
   document.querySelector("#newDiceEnabled").checked = false;
   document.querySelector("#newCharFamily").value = "";
   document.querySelector("#newCharAppearance").value = "";
+  els.newDossierFiles.value = "";
+  els.newDossierNote.value = "";
+  renderFileList(els.newDossierFiles, els.newDossierFileList);
   els.newSaveDialog.showModal();
 }
 
-function createSaveFromForm() {
+async function createSaveFromForm() {
   const newCampaign = createBlankCampaign({
     title: document.querySelector("#newSaveTitle").value.trim() || "新的世界線",
     name: document.querySelector("#newCharName").value.trim() || "未命名角色",
@@ -1422,6 +1429,14 @@ function createSaveFromForm() {
     family: document.querySelector("#newCharFamily").value.trim(),
     appearance: document.querySelector("#newCharAppearance").value.trim()
   });
+  const openingNote = els.newDossierNote.value.trim();
+  const dossiers = await collectDossiersFromFiles(els.newDossierFiles.files, openingNote);
+  if (dossiers.length) {
+    applyDossiersToCampaign(newCampaign, dossiers, openingNote, {
+      initial: true,
+      addTurn: true
+    });
+  }
   db.saves.push(newCampaign);
   els.newSaveDialog.close();
   setActiveCampaign(newCampaign.campaignId);
@@ -1485,12 +1500,16 @@ function openDossierDialog() {
 }
 
 function renderDossierFileList() {
-  const files = Array.from(els.dossierFiles.files || []);
+  renderFileList(els.dossierFiles, els.dossierFileList);
+}
+
+function renderFileList(input, target) {
+  const files = Array.from(input.files || []);
   if (!files.length) {
-    els.dossierFileList.textContent = "尚未選擇檔案";
+    target.textContent = "尚未選擇檔案";
     return;
   }
-  els.dossierFileList.innerHTML = files.map((file) => `
+  target.innerHTML = files.map((file) => `
     <div class="dossier-file">
       <strong>${escapeHtml(file.name)}</strong>
       <span>${formatBytes(file.size)} · ${escapeHtml(file.type || "text")}</span>
@@ -1499,10 +1518,18 @@ function renderDossierFileList() {
 }
 
 async function appendDossiersToCampaign() {
-  const files = Array.from(els.dossierFiles.files || []);
-  if (!files.length || !campaign) return;
-
   const note = els.dossierNote.value.trim();
+  const dossiers = await collectDossiersFromFiles(els.dossierFiles.files, note);
+  if (!dossiers.length || !campaign) return;
+
+  applyDossiersToCampaign(campaign, dossiers, note, { addTurn: true });
+  saveActiveCampaign();
+  els.dossierDialog.close();
+  render();
+}
+
+async function collectDossiersFromFiles(fileList, note = "") {
+  const files = Array.from(fileList || []);
   const dossiers = [];
 
   for (const file of files) {
@@ -1523,21 +1550,40 @@ async function appendDossiersToCampaign() {
     });
   }
 
-  campaign.memoryLayer = normalizeMemoryLayer(campaign.memoryLayer, campaign.storySummary);
-  campaign.memoryLayer.importedDossiers.push(...dossiers);
-  campaign.memoryLayer.worldMemory = mergeList(campaign.memoryLayer.worldMemory, [
-    `玩家於遊玩中追加 ${dossiers.length} 份卷宗到目前世界線。這些資料只屬於 active campaign「${campaign.title}」，AI DM 不得讀取其他世界線或封存存檔。`,
-    ...dossiers.map((item) => `追加卷宗「${item.filename}」：${item.summary}`)
+  return dossiers;
+}
+
+function applyDossiersToCampaign(targetCampaign, dossiers, note = "", options = {}) {
+  targetCampaign.memoryLayer = normalizeMemoryLayer(targetCampaign.memoryLayer, targetCampaign.storySummary);
+  targetCampaign.memoryLayer.importedDossiers.push(...dossiers);
+
+  const actionText = options.initial
+    ? `玩家建立世界線時加入 ${dossiers.length} 份開局卷宗。這些資料只屬於 active campaign「${targetCampaign.title}」，AI DM 不得讀取其他世界線或封存存檔。`
+    : `玩家於遊玩中追加 ${dossiers.length} 份卷宗到目前世界線。這些資料只屬於 active campaign「${targetCampaign.title}」，AI DM 不得讀取其他世界線或封存存檔。`;
+
+  targetCampaign.memoryLayer.worldMemory = mergeList(targetCampaign.memoryLayer.worldMemory, [
+    actionText,
+    ...dossiers.map((item) => `${options.initial ? "開局卷宗" : "追加卷宗"}「${item.filename}」：${item.summary}`)
   ]);
   if (note) {
-    campaign.memoryLayer.worldMemory = mergeList(campaign.memoryLayer.worldMemory, [`卷宗補充說明：${note}`]);
+    targetCampaign.memoryLayer.worldMemory = mergeList(targetCampaign.memoryLayer.worldMemory, [`卷宗補充說明：${note}`]);
   }
-  campaign.memoryLayer.campaignSummary = summarizeRawText(`${campaign.memoryLayer.campaignSummary || campaign.storySummary} ${dossiers.map((item) => item.summary).join(" ")}`);
-  campaign.flags.dossiers_appended = { label: "已於遊玩中追加卷宗", value: true, permanent: true };
-  addTurn("dm", buildDossierTurnText(dossiers, note), campaign.options);
-  saveActiveCampaign();
-  els.dossierDialog.close();
-  render();
+
+  targetCampaign.memoryLayer.campaignSummary = summarizeRawText(`${targetCampaign.memoryLayer.campaignSummary || targetCampaign.storySummary} ${dossiers.map((item) => item.summary).join(" ")}`);
+  targetCampaign.storySummary = summarizeRawText(`${targetCampaign.storySummary} ${dossiers.map((item) => item.summary).join(" ")}`);
+  targetCampaign.flags.dossiers_appended = { label: options.initial ? "已加入開局卷宗" : "已於遊玩中追加卷宗", value: true, permanent: true };
+
+  if (options.addTurn) {
+    targetCampaign.turns.push({
+      id: crypto.randomUUID(),
+      kind: "dm",
+      time: new Date().toISOString(),
+      meta: options.initial ? "開局｜卷宗匯入" : `${targetCampaign.worldState.timeOfDay}｜${targetCampaign.worldState.location}`,
+      text: buildDossierTurnText(dossiers, note, options),
+      options: targetCampaign.options,
+      snapshot: snapshotStateFor(targetCampaign)
+    });
+  }
 }
 
 function parseDossierText(text, filename) {
@@ -1572,9 +1618,10 @@ function parseDossierText(text, filename) {
   };
 }
 
-function buildDossierTurnText(dossiers, note) {
+function buildDossierTurnText(dossiers, note, options = {}) {
   const list = dossiers.map((item) => `- ${item.filename}：${item.summary}${item.truncated ? "（原文過長，已保留前段於本地記憶層）" : ""}`).join("\n");
-  return `新的卷宗已收入目前世界線。\n\n${list}${note ? `\n\n補充說明：${note}` : ""}\n\nAI DM 之後接續主持時，應把這些卷宗視為目前存檔的補充記憶；它們不會套用到其他世界線。`;
+  const intro = options.initial ? "開局卷宗已收入新的世界線。" : "新的卷宗已收入目前世界線。";
+  return `${intro}\n\n${list}${note ? `\n\n補充說明：${note}` : ""}\n\nAI DM 之後接續主持時，應把這些卷宗視為目前存檔的補充記憶；它們不會套用到其他世界線。`;
 }
 
 function readFileAsText(file) {
