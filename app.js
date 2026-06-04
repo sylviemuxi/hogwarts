@@ -472,6 +472,9 @@ document.querySelector("#saveSettingsBtn").addEventListener("click", (event) => 
     endpoint: document.querySelector("#apiEndpoint").value.trim(),
     model: document.querySelector("#apiModel").value.trim(),
     apiKey: document.querySelector("#apiKey").value.trim(),
+    dmInstructions: document.querySelector("#dmInstructions").value.trim(),
+    dmKnowledge: document.querySelector("#dmKnowledge").value.trim(),
+    dmStyleExamples: document.querySelector("#dmStyleExamples").value.trim(),
     desktopMode: document.querySelector("#desktopMode").checked
   };
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
@@ -558,6 +561,9 @@ function defaultSettings() {
     endpoint: "https://api.openai.com/v1/responses",
     model: "gpt-4.1-mini",
     apiKey: "",
+    dmInstructions: "",
+    dmKnowledge: "",
+    dmStyleExamples: "",
     desktopMode: false
   };
 }
@@ -1277,7 +1283,7 @@ function buildAiRequest(provider, prompt) {
       body: JSON.stringify({
         model: settings.model || getProviderDefaults(provider).model,
         messages: [
-          { role: "system", content: "你是沉浸式長期跑團的 AI DM。只回傳有效 JSON。" },
+          { role: "system", content: "你是沉浸式長期跑團的 AI DM。遵循使用者 prompt，且只回傳有效 JSON。" },
           { role: "user", content: prompt }
         ],
         temperature: 0.85
@@ -1322,10 +1328,28 @@ function extractAiText(provider, data) {
   return data.output_text || data.output?.flatMap((x) => x.content || []).map((x) => x.text || "").join("\n") || "";
 }
 
+function buildDmProfilePrompt() {
+  const sections = [
+    ["GPT Instructions", settings.dmInstructions],
+    ["知識／世界規則摘要", settings.dmKnowledge],
+    ["回覆範例／風格樣本", settings.dmStyleExamples]
+  ].filter(([, value]) => value?.trim());
+
+  if (!sections.length) return "";
+
+  return `
+自訂 AI DM 設定檔：
+以下內容來自玩家自己的 Custom GPT 設定。請盡量遵循其風格、人設、世界規則與禁忌，但不得違反上方硬性規則、不得讀取其他世界線，且最後仍必須回傳指定 JSON。
+
+${sections.map(([title, value]) => `### ${title}\n${value.trim()}`).join("\n\n")}
+`;
+}
+
 function buildDmPrompt(action) {
   const diceRule = campaign.ruleSettings?.diceEnabled
     ? "本世界線啟用擲骰系統。若行動結果具有高不確定性，可以要求玩家進行 D20 檢定，或根據 last_roll 旗標描述成敗後果。"
     : "本世界線未啟用擲骰系統。請直接用世界狀態、角色能力、NPC 記憶與事件旗標做敘事判定，不要要求玩家擲骰。";
+  const dmProfile = buildDmProfilePrompt();
   return `你是《霍格華茲》的 AI DM。請用繁體中文主持長期人生模擬。
 
 硬性規則：
@@ -1337,6 +1361,7 @@ function buildDmPrompt(action) {
 - 擲骰規則：${diceRule}
 - 可在 statePatch.locations 中新增 AI 自行建構的新地點；未解鎖但被提及的地點請設 mentioned: true。
 - 回覆必須是單一 JSON，不要 Markdown。
+${dmProfile}
 
 JSON 格式：
 {
@@ -1887,6 +1912,9 @@ function openSettings() {
   document.querySelector("#apiEndpoint").value = settings.endpoint || getProviderDefaults(settings.provider).endpoint;
   document.querySelector("#apiModel").value = settings.model || getProviderDefaults(settings.provider).model;
   document.querySelector("#apiKey").value = settings.apiKey || "";
+  document.querySelector("#dmInstructions").value = settings.dmInstructions || "";
+  document.querySelector("#dmKnowledge").value = settings.dmKnowledge || "";
+  document.querySelector("#dmStyleExamples").value = settings.dmStyleExamples || "";
   document.querySelector("#desktopMode").checked = Boolean(settings.desktopMode);
   els.settingsDialog.showModal();
 }

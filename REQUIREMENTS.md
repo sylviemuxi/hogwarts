@@ -281,6 +281,25 @@ AI DM 每回合需讀取結構化記憶，而不是只依賴最近對話。這�
 
 > 玩家可以沿用自己調教過的本地模型或私有 API，讓同一個網站成為可替換 AI DM 的長期魔法檔案館。
 
+### 4.2 Custom GPT 設定檔搬移
+
+ChatGPT 內建的 Custom GPT 不能直接嵌入網站或作為外部 API 呼叫；若玩家想沿用自己付費、自己調教的 GPT，系統需提供「AI DM 設定檔」欄位，讓玩家手動貼入：
+
+- GPT Instructions
+- Knowledge／世界規則摘要
+- 禁止事項
+- 回覆格式要求
+- 敘事風格範例
+
+這些內容會被加入 AI prompt，與目前 active campaign 的記憶層一起送給 API 模型，使網站中的 AI DM 盡量模仿該 Custom GPT 的主持方式。
+
+限制：
+
+- 不直接讀取 ChatGPT 內的 Custom GPT
+- 不同步 ChatGPT 對話記憶
+- 不上傳到 GitHub
+- 設定檔預設保存在本機瀏覽器，未來可納入雲端使用者設定
+
 ### 5. 回憶相簿／Pensieve 入口
 
 儲思盆不應只是欄位列表，需可點開查看單一回憶。
